@@ -38,38 +38,39 @@ public class BytesRecordReader implements RecordReader {
 		final byte[] key;
 		final Integer valSize;
 		if (includesKeys) {
-			final Integer keySize = readLen(topic, partition, offset, data);
+			final Integer keySize = readLen(data);
 			if (keySize == null) {
-				log.warn(String.format("Failed to calculate key size, skipping. Topic: %s, Partition: %d, Offset: %d", topic, partition, offset));
+				if(log.isWarnEnabled())
+				log.warn("Failed to calculate key size, skipping. Topic: {}, Partition: {}, Offset: {}", topic, partition, offset);
 				return null;
 			}
-			key = readBytes(keySize, data, topic, partition, offset);
+			key = readBytes(keySize, data);
 			if(key == null) {
-				log.warn(String.format("Key not found, skipping. Topic: %s, Partition: %d, Offset: %d", topic, partition, offset));
+				log.warn("Key not found, skipping. Topic: {}, Partition: {}, Offset: {}", topic, partition, offset);
 				return null;
 			}
 
-			valSize = readLen(topic, partition, offset, data);
+			valSize = readLen(data);
 			if(valSize == null) {
-				log.warn(String.format("Failed to calculate value size, skipping. Topic: %s, Partition: %d, Offset: %d", topic, partition, offset));
+				log.warn("Failed to calculate value size, skipping. Topic: {}, Partition: {}, Offset: {}", topic, partition, offset);
 				return null;
 			}
 		} else {
 			key = null;
-			Integer vSize = readLen(topic, partition, offset, data);
+			Integer vSize = readLen(data);
 			if (vSize == null) {
-				log.warn(String.format("Failed to calculate value size, skipping. Topic: %s, Partition: %d, Offset: %d", topic, partition, offset));
+				log.warn("Failed to calculate value size, skipping. Topic: {}, Partition: {}, Offset: {}", topic, partition, offset);
 				return null;
 			}
 			valSize = vSize;
 		}
 
-		final byte[] value = readBytes(valSize, data, topic, partition, offset);
+		final byte[] value = readBytes(valSize, data);
 
 		return new ConsumerRecord<>(topic, partition, offset, key, value);
 	}
 
-	private byte[] readBytes(int size, InputStream data, String topic, int partition, long offset) throws IOException {
+	private byte[] readBytes(int size, InputStream data) throws IOException {
 		final byte[] bytes = new byte[size];
 		int read = 0;
 		while (read < size) {
@@ -82,7 +83,7 @@ public class BytesRecordReader implements RecordReader {
 		return bytes;
 	}
 
-	private Integer readLen(String topic, int partition, long offset, InputStream data) throws IOException {
+	private Integer readLen(InputStream data) throws IOException {
 		lenBuffer.rewind();
 		int read = data.read(lenBuffer.array(), 0, 4);
 		if (read == -1) {
