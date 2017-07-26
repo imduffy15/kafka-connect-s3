@@ -38,9 +38,9 @@ public class BytesRecordReader implements RecordReader {
 		final byte[] key;
 		final Integer valSize;
 		if (includesKeys) {
-			// if at the end of the stream, return null
 			final Integer keySize = readLen(topic, partition, offset, data);
 			if (keySize == null) {
+				log.warn(String.format("Failed to calculate key size, skipping. Topic: %s, Partition: %d, Offset: %d", topic, partition, offset));
 				return null;
 			}
 			key = readBytes(keySize, data, topic, partition, offset);
@@ -49,7 +49,7 @@ public class BytesRecordReader implements RecordReader {
 				return null;
 			}
 
-			valSize = readValueLen(topic, partition, offset, data);
+			valSize = readLen(topic, partition, offset, data);
 			if(valSize == null) {
 				log.warn(String.format("Failed to calculate value size, skipping. Topic: %s, Partition: %d, Offset: %d", topic, partition, offset));
 				return null;
@@ -69,21 +69,13 @@ public class BytesRecordReader implements RecordReader {
 		return new ConsumerRecord<>(topic, partition, offset, key, value);
 	}
 
-	private Integer readValueLen(String topic, int partition, long offset, InputStream data) throws IOException {
-		final Integer len = readLen(topic, partition, offset, data);
-		if (len == null) {
-			return die(topic, partition, offset);
-		}
-		return len;
-	}
-
-	private byte[] readBytes(int keySize, InputStream data, String topic, int partition, long offset) throws IOException {
-		final byte[] bytes = new byte[keySize];
+	private byte[] readBytes(int size, InputStream data, String topic, int partition, long offset) throws IOException {
+		final byte[] bytes = new byte[size];
 		int read = 0;
-		while (read < keySize) {
-			final int readNow = data.read(bytes, read, keySize - read);
+		while (read < size) {
+			final int readNow = data.read(bytes, read, size - read);
 			if (readNow == -1) {
-				return die(topic, partition, offset);
+				return null;
 			}
 			read += readNow;
 		}
@@ -96,15 +88,8 @@ public class BytesRecordReader implements RecordReader {
 		if (read == -1) {
 			return null;
 		} else if (read != 4) {
-			return die(topic, partition, offset);
+			return null;
 		}
 		return lenBuffer.getInt();
 	}
-
-
-	protected ConsumerRecord<byte[], byte[]> die(String topic, int partition, long offset) {
-		log.warn(String.format("Corrupt record at topic: %s partition: %d offset: %d", topic, partition, offset));
-		return null;
-	}
-
 }
