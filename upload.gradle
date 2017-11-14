@@ -2,14 +2,6 @@ apply plugin: 'java'
 apply plugin: 'maven'
 apply plugin: 'signing'
 
-ext."signing.keyId" = '3D5954DE'
-ext."signing.password" = System.env.KEY_PASS
-ext."signing.secretKeyRingFile" = "${rootDir}/secring"
-
-signing {
-	sign configurations.archives
-}
-
 artifacts {
 	archives(tasks.shadowJar) {
 		classifier 'shadow'
@@ -17,28 +9,14 @@ artifacts {
 	}
 }
 
-def ossrhUsername = System.env.OSSRH_USER
-def ossrhPassword = System.env.OSSRH_PASS
-
-apply plugin: 'io.codearte.nexus-staging'
-
-// not currently working... https://oss.sonatype.org/#stagingRepositories
-nexusStaging {
-	stagingProfileId = "28dfc7f49c610c"
-	numberOfRetries = 20
-}
+def bintray_username = System.env.BINTRAY_USERNAME
+def bintray_password = System.env.BINTRAY_PASSWORD
 
 uploadArchives {
 	repositories {
 		mavenDeployer {
-			beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-			repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-				authentication(userName: ossrhUsername, password: ossrhPassword)
-			}
-
-			snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-				authentication(userName: ossrhUsername, password: ossrhPassword)
+			repository(url: "https://api.bintray.com/maven/iduffy/maven/kafka-connect-s3/;publish=1") {
+				authentication(userName: bintray_username, password: bintray_password)
 			}
 
 			pom.project {
